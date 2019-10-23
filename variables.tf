@@ -38,10 +38,6 @@ variable "instance_prefix" {
     default = "server"
 }
 
-variable "ssh_key_file" {
-  default = "~/.ssh/terraform"
-}
-
 variable "gitlab_server_url" {
   default = "https://gitlab.com/"
 }

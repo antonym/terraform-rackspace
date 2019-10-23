@@ -8,8 +8,8 @@ provider "openstack" {
 }
 
 resource "openstack_compute_keypair_v2" "terraform" {
-  name       = "terraform"
-  public_key = "${file("${var.ssh_key_file}.pub")}"
+  name       = "terraform-${terraform.workspace}"
+  public_key = "${file("~/.ssh/terraform-${terraform.workspace}.pub")}"
 }
 
 resource "openstack_compute_instance_v2" "mnaio-runners" {
@@ -33,12 +33,13 @@ resource "openstack_compute_instance_v2" "mnaio-runners" {
   connection {
     type        = "ssh"
     user        = "root"
-    private_key = "${file("~/.ssh/terraform")}"
+    private_key = "${file("~/.ssh/terraform-${terraform.workspace}")}"
     host        = "${self.network.0.fixed_ip_v4}"
     }
 
     inline = [
       "echo '    ServerAliveInterval 60' >> /etc/ssh/ssh_config",
+      "cp /etc/hosts /etc/hosts.orig",
       "apt-get update -y -qq",
       "dpkg-reconfigure libc6",
       "export DEBIAN_FRONTEND=noninteractive",
@@ -47,7 +48,7 @@ resource "openstack_compute_instance_v2" "mnaio-runners" {
       "chmod +x /usr/local/bin/gitlab-runner",
       "mkdir -p /opt/gitlab-runner",
       "gitlab-runner install --user=root",
-      "RUNNER_NAME=${self.name} RUNNER_TAG_LIST=${var.gitlab_runner_tags} CI_SERVER_URL=${var.gitlab_server_url} REGISTRATION_TOKEN=${var.gitlab_runner_token} RUNNER_EXECUTOR=${var.gitlab_executor_type} REGISTER_NON_INTERACTIVE=true gitlab-runner register",
+      "RUNNER_NAME=${self.name} RUNNER_TAG_LIST=${var.gitlab_runner_tags} CI_SERVER_URL=${var.gitlab_server_url} REGISTRATION_TOKEN=${var.gitlab_runner_token} RUNNER_EXECUTOR=${var.gitlab_executor_type} REGISTER_NON_INTERACTIVE=true RUNNER_OUTPUT_LIMIT=16384 gitlab-runner register",
       "gitlab-runner start"
     ]
   }
